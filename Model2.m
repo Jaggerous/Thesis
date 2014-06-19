@@ -11,13 +11,13 @@ d = zeros(101, 60);
 
         %Inputs
 %Chance of mortality if patch i is visited
-m = [0 0 0];
+m = [0.05 0.04 0];
 %Probability that food is found in patch
-p = [0.5 0.5 0];
+p = [0.4 0.5 0];
 %Energetic cost of foraging in patch
-a = [3 3 3];
+a = [1.5 1.5 1.5];
 %Energetic value of food in patch
-y = [4 4 0];
+y = [10 8 0];
 
 
 %critical level of reserves
@@ -82,19 +82,54 @@ end
 
  
 for t = t_max - 1:-1:1;
-    %disp (sprintf('t\tx\tF(x,t)\td(x,t)\tV(1,x,t)\tV(2,x,t)\tV(3,x,t)'))
+    disp (sprintf('t\tx\tF(x,t)\td(x,t)\tV(1,x,t)\tV(2,x,t)\tV(3,x,t)'))
     for x = x_crit+1:x_max;
         
         for i = 1:3;
+            
             %Effect of visiting a foraging patch
             if (i == 1 || i == 2);
-                xp = min(x - a(i) + y(i), x_max);
-                xpp = max(x - a(i), x_crit);
-                v(i,x+1,t) = (1-m(i)) * (p(i) * f(xp+1, t+1) + (1-p(i)) * f(xpp+1,t+1));
+                foodyes = min(x - a(i) + y(i), x_max);
+                foodno = max(x - a(i), x_crit);
+                
+                %Interpolation for non integers
+                if rem(foodyes,1) == 0;
+                    foodyes_f = f(foodyes+1, t+1);
+                else
+                    fl = floor(foodyes);
+                    ce = ceil(foodyes);
+                    w = foodyes - fl;
+                    foodyes_f = ((1-w) * f(fl+1, t+1)) + (w * f(ce+1, t+1));
+                end
+                if rem(foodno,1) == 0;
+                    foodno_f = f(foodno+1, t+1);
+                else
+                    fl = floor(foodno);
+                    ce = ceil(foodno);
+                    w = foodno - fl;
+                    foodno_f = ((1-w) * f(fl+1, t+1)) + ((w * f(ce+1, t+1)));
+                end
+                
+                %Patch Fitness
+                v(i,x+1,t) = (1-m(i)) * ((p(i) * foodyes_f) + ((1-p(i)) * foodno));
+                
+                
             else
             %Effect of visiting a refuge
-                xp = max(x-a(3),x_crit);
-                v(3,x+1,t) = (1-m(3)) * f(xp+1, t+1); 
+                refuge = max(x-a(3),x_crit);
+                
+                %Interpolation
+                if rem(refuge,1) == 0;
+                    refuge_f = f(refuge+1, t+1);
+                else
+                    fl = floor(refuge);
+                    ce = ceil(refuge);
+                    w = refuge - fl;
+                    refuge_f = ((1-w) * f(fl+1, t+1)) + (w * f(ce+1, t+1));
+                end
+                    
+                %Patch Fitness
+                v(3,x+1,t) = (1-m(3)) * refuge_f; 
             end
         end
     
@@ -110,27 +145,27 @@ for t = t_max - 1:-1:1;
         %Record optimal fitness value
     	f(x+1, t) = vmax;
     
-        %disp(sprintf('%d\t%d\t%2.2f\t%d\t\t%2.2f\t\t%2.2f\t\t%2.2f', t, x, f(x+1,t), d(x+1,t), v(1,x+1,t), v(2,x+1,t), v(3,x+1,t)))
+        disp(sprintf('%d\t%d\t%2.2f\t%d\t\t%2.2f\t\t%2.2f\t\t%2.2f', t, x, f(x+1,t), d(x+1,t), v(1,x+1,t), v(2,x+1,t), v(3,x+1,t)))
     end
 end
 
 %save patch matrix for graphing
 cd('E:\Users\Jaggerous\Documents\MATLAB\Project')
-csvwrite('risk_0.005_400.csv', d)
+csvwrite('mort_0.5_0.4_risk_0.4.csv', d)
 
 
 %Forward iteration probability distribution function
 
 %Set up matrix and parameters
 f_prob = zeros(101, 61);
-init_state = 50;
+init_state = 20;
 
 %Input initial state
 f_prob(init_state+1, 1) = 1;
 
 for t = 1:t_max-1;
     %identify non zero states (possible states) within a particular time step
-    possible_states = find(f_prob(:, t))
+    possible_states = find(f_prob(:, t));
     %for each state within possible_states do x
     for state_i = transpose(possible_states);
         
@@ -152,12 +187,48 @@ for t = 1:t_max-1;
      %Change prob for t+1 based on chance of finding food
             success_i = max(1, state_i + reward - cost);
             success_i = min(101,success_i);
-            f_prob(success_i,t+1) = f_prob(success_i,t+1) + (state_prob * (p_success * (1 - m_prob)));
+            change = (state_prob * (p_success * (1 - m_prob)));
+            
+            %Interpolation
+            if rem(success_i,1) == 0;
+                f_prob(success_i,t+1) = f_prob(success_i,t+1) + change;   
+            else
+                fl = floor(success_i);
+                ce = ceil(success_i);
+                w = success_i - fl;
+                    
+                %Split change between two states at t+1
+                f_prob(fl,t+1) = f_prob(fl,t+1) + ((1-w) * change);
+                f_prob(ce,t+1) = f_prob(ce,t+1) + ((w) * change);
+            end
             
      %Change prob for t+1 based on chance of not food
             fail_i = max(1, state_i - cost);
             fail_i = min(101,fail_i);
-            f_prob(fail_i,t+1) = f_prob(fail_i,t+1) + (state_prob * (p_fail * (1 - m_prob)));
+            change = (state_prob * (p_fail * (1 - m_prob)));
+            
+             if rem(fail_i,1) == 0;
+                f_prob(fail_i,t+1) = f_prob(fail_i,t+1) + change;   
+            else
+                fl = floor(fail_i);
+                ce = ceil(fail_i);
+                w = fail_i - fl;
+                    
+                %Split change between two states at t+1
+                f_prob(fl,t+1) = f_prob(fl,t+1) + ((1-w) * change);
+                f_prob(ce,t+1) = f_prob(ce,t+1) + ((w) * change);
+            end
+            
         end
     end
 end
+
+%Extract mean state for forward iteration
+mean_state = zeros(1,59);
+    for t = 2:60;
+        for i = 2:101;
+            mean_state(1,t-1)= mean_state(1,t-1) + (f_prob(i,t)*(i-1));
+        end
+        mean_state(1,t-1)= mean_state(1,t-1)/(1-(f_prob(1,t)));
+    end
+    
