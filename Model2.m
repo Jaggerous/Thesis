@@ -11,13 +11,13 @@ d = zeros(101, 60);
 
         %Inputs
 %Chance of mortality if patch i is visited
-m = [0.05 0.04 0];
+m = [0 0 0];
 %Probability that food is found in patch
-p = [0.4 0.5 0];
+p = [0.2 0.4 0];
 %Energetic cost of foraging in patch
-a = [1.5 1.5 1.5];
+a = [3 3 3];
 %Energetic value of food in patch
-y = [10 8 0];
+y = [40 20 0];
 
 
 %critical level of reserves
@@ -111,7 +111,7 @@ for t = t_max - 1:-1:1;
                 end
                 
                 %Patch Fitness
-                v(i,x+1,t) = (1-m(i)) * ((p(i) * foodyes_f) + ((1-p(i)) * foodno));
+                v(i,x+1,t) = (1-m(i)) * ((p(i) * foodyes_f) + ((1-p(i)) * foodno_f));
                 
                 
             else
@@ -150,8 +150,8 @@ for t = t_max - 1:-1:1;
 end
 
 %save patch matrix for graphing
-cd('E:\Users\Jaggerous\Documents\MATLAB\Project')
-csvwrite('mort_0.5_0.4_risk_0.4.csv', d)
+cd('E:\Users\Jaggerous\Documents\MATLAB\Project\plot_csv\plot_csv')
+csvwrite('risk_0.1_50.csv', d)
 
 
 %Forward iteration probability distribution function
@@ -229,6 +229,6 @@ mean_state = zeros(1,59);
         for i = 2:101;
             mean_state(1,t-1)= mean_state(1,t-1) + (f_prob(i,t)*(i-1));
         end
-        mean_state(1,t-1)= mean_state(1,t-1)/(1-(f_prob(1,t)));
+    mean_state(1,t-1)= mean_state(1,t-1)/(1-(f_prob(1,t)));
     end
     
