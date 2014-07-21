@@ -11,13 +11,13 @@ d = zeros(101, 60);
 
         %Inputs
 %Chance of mortality if patch i is visited
-m = [0 0 1];
+m = [0.05 0.04 0];
 %Probability that food is found in patch
-p = [0.25 0.5 0];
+p = [0.2 0.5 0];
 %Energetic cost of foraging in patch
 a = [3 3 3];
 %Energetic value of food in patch
-y = [16 8 0];
+y = [20 8 0];
 
 
 %critical level of reserves
@@ -151,14 +151,14 @@ end
 
 %save patch matrix for graphing
 cd('E:\Users\Jaggerous\Documents\MATLAB\Project\plot_csv\plot_csv')
-csvwrite('risk_0.1_50.csv', d)
+csvwrite('mort_0.4_0.04.csv', d)
 
 
 %Forward iteration probability distribution function
 
 %Set up matrix and parameters
 f_prob = zeros(101, 61);
-init_state = 20;
+init_state = 50;
 
 %Input initial state
 f_prob(init_state+1, 1) = 1;
@@ -241,10 +241,14 @@ patch_time = zeros (3,58);
         for state = transpose(find(f_prob(2:end,t)));
             %adjust state as excluding dead state minuses 1
             state = state + 1;
+            patch = d(state, t);
             %increment patch_time accumulator
             patch_time(patch, t-1) = patch_time(patch, t-1) + f_prob(state, t);
+            %normalise across non-dead states
         end
-     %normalise across non-dead states
-     patch_time(patch, t-1)=patch_time(patch, t-1)/(1-(f_prob(1,t)));
+        for patch = 1:3;
+            patch_time(patch, t-1)=patch_time(patch, t-1)/(1-(f_prob(1,t)));
+        end
+     
      end
         
